@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Materi</title>
+
+    <link rel="stylesheet" href="assets/output.css">
+</head>
+<body>
+
+<header class="flex items-center justify-between p-4 border-b-4 border-violet-600">
+    <button class="btn back_button">Kembali</button>
+    <h1 class="text-4xl font-bold font-display bg-gradient-to-r from-violet-500 to-violet-800 bg-clip-text text-transparent">
+        GEOVIZ
+    </h1>
+    <!--<div class="w-12"></div>-->
+</header>
+
+<div class="flex items-center justify-center min-h-screen">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 m-6 rounded-lg w-full lg:w-auto text-center">
+
+        <div class="p-6 rounded flex flex-col flex-1 lg:flex-none lg:basis-2/5 space-y-8">
+            <h1 id="material_title" class="text-title text-title-medium"></h1>
+
+            <p id="material_description" class="text-xl font-body text-violet-600 drop-shadow-lg text-justify">
+                Materi tidak ditemukan
+            </p>
+
+            <div class="p-4 rounded-3xl border-4 border-violet-600 relative">
+                <p id="material_formula" class="text-title text-title-small text-justify">
+                    Formula: A = B + C
+                </p>
+            </div>
+        </div>
+
+        <div class="flex-1 lg:flex-none lg:basis-2/5 flex flex-col space-y-8">
+            <div class="px-6 pb-4">
+                <p id="material_exmaple" class="text-xl font-body text-violet-600 drop-shadow-lg text-justify">
+                    Example: A = 2 + 3
+                </p>
+            </div>
+
+            <div class="p-4 pt-8 rounded-3xl flex items-center justify-center border-4 border-violet-600 relative">
+                <div class="float-title float-title-top">
+                    Visualisasi
+                </div>
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <button id="visual_2d_button" class="btn">Visualisasi 2D</button>
+                    <button id="visual_3d_button" class="btn">Visualisasi 3D</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Buttons event listeners
+    document.querySelectorAll('.back_button').forEach(button => {
+        button.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = urlParams.get('type');
+
+    document.getElementById('visual_2d_button').addEventListener('click', function () {
+        window.location.href = 'vis2d.html?type=' + type;
+    });
+
+    document.getElementById('visual_3d_button').addEventListener('click', function () {
+        window.location.href = 'vis3d.html?type=' + type;
+    });
+
+    // Load material json
+    fetch('assets/material.json')
+        .then(response => response.json())
+        .then(data => {
+            // Change material page content
+            document.getElementById('material_title').innerText = type.toUpperCase();
+            document.getElementById('material_description').innerText = data[type].description;
+            document.getElementById('material_formula').innerText = data[type].formula;
+            document.getElementById('material_exmaple').innerText = data[type].example;
+        });
+</script>
+</body>
+</html>
