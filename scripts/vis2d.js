@@ -1,3 +1,5 @@
+import { calculateRange, plot2DShape, animate2DTransformation, calculate2DTransformedCoordinates } from "./plotly_helper.js";
+
 const urlParams = new URLSearchParams(window.location.search);
 const type = urlParams.get('type');
 
@@ -30,27 +32,38 @@ if (transformationDivs[type]) {
 // Variables
 const plot_area = document.getElementById('plot_area');
 let originalPoints = getOriginalShapeCoordinates();
-let transformedPoints = calculateTransformedCoordinates(originalPoints, type);
+let transformedPoints = calculate2DTransformedCoordinates(originalPoints, type, getCalculationValues());
 
 // Initial plot with initial range
 const padding = 1;
 const { xRange, yRange } = calculateRange(originalPoints, [], padding);
-plotShape(originalPoints, plot_area, 'blue', false, xRange, yRange);
+plot2DShape(originalPoints, plot_area, 'blue', false, xRange, yRange);
 
 // Button event listeners
 document.getElementById('plot_button').addEventListener('click', () => {
     // Recalculate transformed points
     originalPoints = getOriginalShapeCoordinates();
-    transformedPoints = calculateTransformedCoordinates(originalPoints, type);
-    
-    plotShape(originalPoints, plot_area, 'blue', false, xRange, yRange);
+    transformedPoints = calculate2DTransformedCoordinates(originalPoints, type, getCalculationValues());
+
+    plot2DShape(originalPoints, plot_area, 'blue', false, xRange, yRange);
 });
 
 document.getElementById('animate_button').addEventListener('click', () => {
     // Recalculate transformed points
-    transformedPoints = calculateTransformedCoordinates(originalPoints, type);
+    transformedPoints = calculate2DTransformedCoordinates(originalPoints, type, getCalculationValues());
 
-    animateTransformation(originalPoints, transformedPoints, plot_area);
+    // Get the values for the transformation
+    const values = {
+        reflection: {
+            axis: document.querySelector('input[name="axis-radio"]:checked').value,
+            k: parseFloat(document.getElementById('value_reflection_k').value)
+        },
+        rotation: {
+            degree: parseFloat(document.getElementById('value_rotation_degree').value)
+        }
+    }
+
+    animate2DTransformation(originalPoints, transformedPoints, plot_area, type, values);
 });
 
 /*
@@ -84,7 +97,6 @@ function removePoint() {
     }
 }
 
-// PLOTLY functions
 function getOriginalShapeCoordinates() {
     const points = [];
     for (let i = 0; i < pointCount; i++) {
@@ -99,206 +111,21 @@ function getOriginalShapeCoordinates() {
     return points;
 }
 
-function calculateRange(originalPoints, transformedPoints = [], padding) {
-    const xValues = originalPoints.map(point => point.x).concat(transformedPoints.map(point => point.x));
-    const yValues = originalPoints.map(point => point.y).concat(transformedPoints.map(point => point.y));
-
-    const xMin = Math.min(...xValues);
-    const xMax = Math.max(...xValues);
-    const yMin = Math.min(...yValues);
-    const yMax = Math.max(...yValues);
-
-    const xMargin = (xMax - xMin) * padding;
-    const yMargin = (yMax - yMin) * padding;
-
+function getCalculationValues() {
     return {
-        xRange: [xMin - xMargin, xMax + xMargin],
-        yRange: [yMin - yMargin, yMax + yMargin]
-    };
-}
-
-function plotShape(points, plotArea, color = 'blue', addToPlot = false, xRange = null, yRange = null) {
-    const xValues = points.map(point => point.x);
-    const yValues = points.map(point => point.y);
-    const labels = points.slice(0, -1).map((_, i) => String.fromCharCode(65 + i)); // Generate labels A, B, C...
-
-    const trace = {
-        x: xValues,
-        y: yValues,
-        mode: 'markers+lines+text', // Enable text labels
-        type: 'scatter',
-        line: { color: color },
-        text: labels,
-        textposition: 'top left', // Position labels above points
-        showlegend: false
-    };
-
-    const layout = {
-        margin: {t: 0, l: 30, r: 30, b: 30},
-        dragmode: 'pan',
-        xaxis: {
-            dtick: 1,
-            range: xRange
+        translation: {
+            x: parseFloat(document.getElementById('value_translation_x').value),
+            y: parseFloat(document.getElementById('value_translation_y').value)
         },
-        yaxis: {
-            dtick: 1,
-            scaleanchor: 'x',
-            range: yRange
+        dilatation: {
+            k: parseFloat(document.getElementById('value_dilatation_k').value)
+        },
+        rotation: {
+            degree: parseFloat(document.getElementById('value_rotation_degree').value)
+        },
+        reflection: {
+            axis: document.querySelector('input[name="axis-radio"]:checked').value,
+            k: parseFloat(document.getElementById('value_reflection_k').value)
         }
-    };
-
-    if (addToPlot) {
-        Plotly.addTraces(plotArea, trace);
-    } else {
-        Plotly.newPlot(plotArea, [trace], layout, {responsive: true});
-    }
-}
-
-function plotLine(plotArea, xValues, yValues, color = 'green') {
-    const extend = 1.5; // Extend the line to the edge of the plot
-    xValues = [xValues[0] - (xValues[1] - xValues[0]) * extend, xValues[1] + (xValues[1] - xValues[0]) * extend];
-    yValues = [yValues[0] - (yValues[1] - yValues[0]) * extend, yValues[1] + (yValues[1] - yValues[0]) * extend];
-
-    const trace = {
-        x: xValues,
-        y: yValues,
-        mode: 'lines',
-        type: 'scatter',
-        line: { color: color },
-        showlegend: false
-    };
-
-    Plotly.addTraces(plotArea, trace);
-}
-
-function animateTransformation(originalPoints, transformedPoints, plotArea) {
-    // Calculate range with padding, so the shape is not on the edge of the plot
-    const padding = 0.5;
-    const { xRange, yRange } = calculateRange(originalPoints, transformedPoints, padding);
-
-    plotShape(originalPoints, plotArea, 'blue', false, xRange, yRange); // Re-plot the entire thing cause plotly is annoying
-    plotShape(originalPoints, plotArea, 'blue', true); // To keep the original shape while animating
-
-    // Plot the required line for reflection transformations
-    // This is not properly implemented, but it works for the current use case
-    if (type === 'refleksi') {
-        const axis = document.querySelector('input[name="axis-radio"]:checked').value;
-        switch (axis) {
-            case 'line-y-x':
-                plotLine(plotArea, xRange, xRange); // y = x
-                break;
-            case 'line-y-neg-x':
-                plotLine(plotArea, xRange, xRange.map(x => -x)); // y = -x
-                break;
-            case 'line-y-k':
-                const kY = parseFloat(document.getElementById('value_reflection_k').value);
-                plotLine(plotArea, xRange, Array(xRange.length).fill(kY)); // y = k
-                break;
-            case 'line-x-k':
-                const kX = parseFloat(document.getElementById('value_reflection_k').value);
-                plotLine(plotArea, Array(yRange.length).fill(kX), yRange); // x = k
-                break;
-        }
-    }
-
-    // Frame generation for animation
-    let frames = [];
-    let duration = 0;
-
-    if (type === 'rotasi') {
-        const numFrames = 60; // Number of frames for smooth animation
-        duration = 30;
-
-        const degree = parseFloat(document.getElementById('value_rotation_degree').value);
-        const radian = degree * (Math.PI / 180);
-
-        for (let i = 0; i <= numFrames; i++) {
-            const intermediateRadian = (radian / numFrames) * i;
-            const intermediatePoints = originalPoints.map(point => ({
-                x: point.x * Math.cos(intermediateRadian) - point.y * Math.sin(intermediateRadian),
-                y: point.x * Math.sin(intermediateRadian) + point.y * Math.cos(intermediateRadian)
-            }));
-
-            frames.push({
-                data: [{
-                    x: intermediatePoints.map(point => point.x),
-                    y: intermediatePoints.map(point => point.y),
-                    line: { color: 'red' }
-                }]
-            });
-        }
-    } else {
-        duration = 500;
-        frames = [
-            {
-                data: [{
-                    x: originalPoints.map(point => point.x),
-                    y: originalPoints.map(point => point.y),
-                    line: { color: 'red' } // Set animation color to red
-                }]
-            },
-            {
-                data: [{
-                    x: transformedPoints.map(point => point.x),
-                    y: transformedPoints.map(point => point.y),
-                    line: { color: 'red' } // Keep color consistent during animation
-                }]
-            }
-        ];
-    }
-
-    Plotly.animate(plotArea, frames, {
-        transition: { duration: duration },
-        frame: { duration: duration, redraw: true }
-    }).then(() => {
-        // After animation, add the transformed shape in red
-        plotShape(transformedPoints, plotArea, 'red', true);
-    });
-}
-
-function calculateTransformedCoordinates(points, type) {
-    let k;
-
-    switch (type) {
-        case 'translasi':
-            return points.map(point => ({
-                x: point.x + parseFloat(document.getElementById('value_translation_x').value),
-                y: point.y + parseFloat(document.getElementById('value_translation_y').value)
-            }));
-        case 'dilatasi':
-            k = parseFloat(document.getElementById('value_dilatation_k').value);
-            return points.map(point => ({
-                x: point.x * k,
-                y: point.y * k
-            }));
-        case 'rotasi':
-            const degree = parseFloat(document.getElementById('value_rotation_degree').value);
-            const radian = degree * (Math.PI / 180);
-            return points.map(point => ({
-                x: point.x * Math.cos(radian) - point.y * Math.sin(radian),
-                y: point.x * Math.sin(radian) + point.y * Math.cos(radian)
-            }));
-        case 'refleksi':
-            const axis = document.querySelector('input[name="axis-radio"]:checked').value;
-            return points.map(point => {
-                switch (axis) {
-                    case 'origin':
-                        return {x: -point.x, y: -point.y};
-                    case 'x-axis':
-                        return {x: point.x, y: -point.y};
-                    case 'y-axis':
-                        return {x: -point.x, y: point.y};
-                    case 'line-y-x':
-                        return {x: point.y, y: point.x};
-                    case 'line-y-neg-x':
-                        return {x: -point.y, y: -point.x};
-                    case 'line-y-k':
-                        k = parseFloat(document.getElementById('value_reflection_k').value);
-                        return {x: point.x, y: 2 * k - point.y};
-                    case 'line-x-k':
-                        k = parseFloat(document.getElementById('value_reflection_k').value);
-                        return {x: 2 * k - point.x, y: point.y};
-                }
-            });
     }
 }
