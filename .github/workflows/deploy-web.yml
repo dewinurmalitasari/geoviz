@@ -1,0 +1,63 @@
+# Name of the workflow shown in the Actions tab
+name: Build and Deploy geoviz-web to v2
+
+# This makes it a manual trigger
+on:
+  workflow_dispatch:
+
+# Grant the workflow permissions to write to your repository
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the SOURCE code (geoviz-web)
+      - name: Checkout geoviz-web repository
+        uses: actions/checkout@v4
+        with:
+          repository: dewinurmalitasari/geoviz-web
+          ref: main # Or whatever branch your source code is on
+          path: geoviz-web-source # Check out to a specific directory
+
+      # Step 2: Set up Node.js to build the project
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use a modern LTS version of Node
+
+      # Step 3: Install dependencies and build the Vite project
+      - name: Install and Build
+        run: |
+          cd geoviz-web-source
+          npm install
+          npm run build
+        # The build output will be in 'geoviz-web-source/dist'
+
+      # Step 4: Deploy the built site to the v2 branch of THIS repo
+      - name: Deploy to v2 branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          # This token is automatically provided by GitHub
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # The repository to deploy to (this one)
+          repository: dewinurmalitasari/geoviz
+          
+          # The branch to deploy to
+          publish_branch: v2
+          
+          # The folder to deploy (the build output)
+          publish_dir: ./geoviz-web-source/dist
+          
+          # The destination directory on the v2 branch ('.' means the root)
+          destination_dir: .
+          
+          # This creates a clean branch with ONLY the build output
+          force_orphan: true
+          
+          # Commit user
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy geoviz-web build to v2'
