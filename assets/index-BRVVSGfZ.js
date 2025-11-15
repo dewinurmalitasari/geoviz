@@ -1,0 +1,1 @@
+import{j as t,E as a}from"./index-CeQ_7HA2.js";const o=()=>t.jsx(a,{status:404,statusText:"Not Found",title:"Halaman Tidak ditemukan",message:"Halaman yang Anda cari tidak ditemukan."});export{o as notFoundComponent};
