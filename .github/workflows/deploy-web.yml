@@ -20,6 +20,7 @@ jobs:
           repository: dewinurmalitasari/geoviz-web
           ref: main # Or whatever branch your source code is on
           path: geoviz-web-source # Check out to a specific directory
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
 
       # Step 2: Set up Node.js to build the project
       - name: Set up Node.js
